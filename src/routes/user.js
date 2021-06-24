@@ -1,90 +1,35 @@
+const User = require("../models/user")
 const express = require("express")
 const router = new express.Router()
-const User = require('../models/user')
 
-router.post('/users', async (req, res) => {
-    const user = new User(req.body)
+router.post("/users", async (req, res) => {
+	try{
 
-    try{
-        await user.save()
-        res.status(201).send(user)
-    }catch(e) {
-        res.status(400).send(e)
-    }
+		const user = new User(req.body)
+
+		const token = await user.generateAuthToken()
+
+		await user.save()
+
+		res.status(201).send({ user, token})
+
+	}catch(e) {
+		res.status(500).send(e.message)
+	}
 })
 
-router.get("/users", async (req, res) => {
-    try{
-        const user = await User.find({})
+router.get("/users/login", async (req, res) => {
+	try{
 
-        if(!user) {
-            return res.status(404).send()
-        }
-        
-        res.status(200).send(user)
+	const userlogin = await User.findByCredentials(req.body.email, req.body.password)
 
-        const countUsers = await User.countDocuments()
-        console.log(countUsers);
+	const token = await userlogin.generateAuthToken()
+
+	res.send(userlogin)
 
     }catch(e) {
-        res.status(500).send(e)
+    	res.status(500).send(e.message)
     }
 })
-
-router.get("/users/:id", async (req, res) => {
-    try{
-        const _id = req.params.id
-        
-        const user = await User.findById(_id)
-        if(!user) {
-            return res.status(404).send()
-        }
-        res.send(user)
-    }catch(e) {
-        res.status(500).send(e)
-    }
-})
-
-router.patch("/users/:id", async (req, res) => {
-    updates = Object.keys(req.body)
-    allowedUpdates = ['name', 'age','password','email']
-    const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
-    if(!isValidOperation) {
-        return res.send(404)
-    }
-
-    try{
-        const _id = req.params.id
-
-        const user = await User.findById(_id)
-
-        updates.forEach((update) => user[update] = req.body[update])
-
-        await user.save()
-
-        if(!user) {
-            return res.status(404).send()
-        }
-
-        res.status(201).send(user)
-    }catch(e) {
-        res.status(500).send(e)
-    }
-})
-
-router.delete("/users/:id", async (req, res) => {
-    try{
-        const _id = req.params.id
-        
-        const user = await User.findByIdAndDelete(_id)
-        if(!user) {
-            return res.status(404).send()
-        }
-        res.send(user)
-    }catch(e) {
-        res.status(500).send(e)
-    }
-})
-
 
 module.exports = router
