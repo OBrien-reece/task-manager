@@ -28,30 +28,11 @@ router.post("/users/login", async (req, res) => {
 		const user = await User.findByCredentials(req.body.email, req.body.password)
 		const token = await user.generateAuthToken()
 
-		res.status(200).send(user)
+		res.status(200).send({ user, token })
 
 	}catch(e) {
 
 		res.status(500).send(e)
-	}
-})
-
-router.get("/users", auth, async (req, res) => {
-
-	try{
-
-		const user = await User.find({})
-
-		if(!user) {
-			return res.status(404).send()
-		}
-
-		res.send(user)
-
-
-	}catch(e) {
-
-		res.status(500).send()
 	}
 })
 
@@ -59,25 +40,7 @@ router.get("/users/me", auth, async (req, res) => {
 	res.send(req.user)
 })
 
-router.delete("/users/:id", async (req, res) => {
-
-	try{
-
-		const user = await User.findByIdAndDelete(req.params.id)
-
-		if(!user) {
-			return res.status(404).send()
-		}
-
-		res.send(user)
-
-	}catch(e) {
-		res.status(500).send(e)
-
-	}
-})
-
-router.patch("/users/:id", async (req, res) => {
+router.patch("/users/me", auth, async (req, res) => {
 
 	const updates = Object.keys(req.body)
 	const allowedUpdates = ['name','age','password','email']
@@ -89,14 +52,46 @@ router.patch("/users/:id", async (req, res) => {
 
 	try{
 
-		const user = await User.findById(req.params.id)
-		console.log(user)
+		// const user = await User.findById(req.params.id)
+		// console.log(user)
 
-		updates.forEach((update) => user[update] = req.body[update])
+		updates.forEach((update) => req.user[update] = req.body[update])
 
-		await user.save()
+		await req.user.save()
 
-		res.status(201).send(user)
+		res.status(201).send(req.user)
+
+	}catch(e) {
+
+		res.status(500).send(e)
+	}
+})
+
+router.post("/users/logout", auth, async (req, res) => {
+
+	try{
+
+		req.user.tokens = req.user.tokens.filter((token) => token.token !== req.token)
+
+		await req.user.save()
+
+		res.status(200).send(req.user)
+
+	}catch(e) {
+
+		res.status(500).send()
+	}
+})
+
+router.post("/users/logoutAll", auth, async (req, res) => {
+
+	try{
+
+		req.user.tokens = []
+
+		await req.user.save()
+
+		res.send()
 
 	}catch(e) {
 
